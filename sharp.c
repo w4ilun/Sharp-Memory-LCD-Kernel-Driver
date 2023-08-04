@@ -67,7 +67,7 @@ static struct fb_var_screeninfo vfb_default = {
     .yres =     240,
     .xres_virtual = 400,
     .yres_virtual = 240,
-    .bits_per_pixel = 24,
+    .bits_per_pixel = 8,
     .grayscale = 1,
     .red =      { 0, 8, 0 },
     .green =    { 0, 8, 0 },
@@ -88,7 +88,7 @@ static struct fb_var_screeninfo vfb_default = {
 static struct fb_fix_screeninfo vfb_fix = {
     .id =       "Sharp FB",
     .type =     FB_TYPE_PACKED_PIXELS,
-    .line_length = 1200,
+    .line_length = 400,
     .xpanstep = 0,
     .ypanstep = 0,
     .ywrapstep =    0,
@@ -263,7 +263,7 @@ int thread_fn(void* v)
     // Main loop
     while (!kthread_should_stop()) 
     {
-        msleep(50);
+        msleep(10);
 
         for(y=0 ; y < 240 ; y++)
         {
@@ -273,7 +273,7 @@ int thread_fn(void* v)
             {
                 for(i=0 ; i<8 ; i++ )
                 {
-                    pixel = ioread8((void*)((uintptr_t)info->fix.smem_start + (x*8 + y*400 + i)*3));
+                    pixel = ioread8((void*)((uintptr_t)info->fix.smem_start + (x*8 + y*400 + i)));
 
                     if(pixel)
                     {
@@ -298,7 +298,7 @@ int thread_fn(void* v)
                 gpio_set_value(SCS, 1);
                 //la memoire allouee avec vzalloc semble trop lente...
                 memcpy(sendBuffer, screenBufferCompressed+y*(50+4), 54);
-                spi_write(screen->spi, (const u8 *)(sendBuffer), 54);
+                spi_write(screen->spi, (const u8 *)(screenBufferCompressed+(y*(50+4))), 54);
                 gpio_set_value(SCS, 0);
             }
 
@@ -396,7 +396,7 @@ err:
     return 0;
 }
 
-static void sharp_remove(struct spi_device *spi)
+static int sharp_remove(struct spi_device *spi)
 {
         if (info) {
                 unregister_framebuffer(info);
@@ -407,7 +407,7 @@ static void sharp_remove(struct spi_device *spi)
 	kthread_stop(fpsThread);
     kthread_stop(vcomToggleThread);
 	printk(KERN_CRIT "out of screen module");
-	//return 0;
+	return 0;
 }
 
 static struct spi_driver sharp_driver = {
