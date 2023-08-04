@@ -42,6 +42,13 @@ char vcomState;
 
 unsigned char lineBuffer[LCDWIDTH/8];
 
+const int ditherMatrix[4][4] = {
+    { 0,  8,  2, 10 },
+    { 12,  4, 14,  6 },
+    {  3, 11,  1,  9 },
+    { 15,  7, 13,  5 }
+};
+
 struct sharp {
     struct spi_device	*spi;
 	int			id;
@@ -274,6 +281,12 @@ int thread_fn(void* v)
                 for(i=0 ; i<8 ; i++ )
                 {
                     pixel = ioread8((void*)((uintptr_t)info->fix.smem_start + (x*8 + y*400 + i)));
+			
+		    // Calculate the threshold value based on the dithering matrix
+		    int threshold = (ditherMatrix[(x * 8 + i) % 4][y % 4] + 0.5) * (255.0 / 15.0);
+
+		    // Set the pixel value to either white or black
+		    pixel = (pixelValue > threshold) ? 1 : 0;
 
                     if(pixel)
                     {
